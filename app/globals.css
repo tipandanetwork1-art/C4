@@ -25,6 +25,46 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+:root {
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --surface-border: #e2e8f0;
+  --surface-text: #0f172a;
+  --surface-muted-text: #475569;
+}
+
+.dark {
+  --surface: #111827;
+  --surface-muted: #0f172a;
+  --surface-border: #1f2937;
+  --surface-text: #f8fafc;
+  --surface-muted-text: #cbd5f5;
+}
+
+.bg-white {
+  background-color: var(--surface) !important;
+}
+
+.bg-slate-50,
+.bg-slate-100 {
+  background-color: var(--surface-muted) !important;
+}
+
+.border-slate-200,
+.border-slate-100 {
+  border-color: var(--surface-border) !important;
+}
+
+.text-slate-900 {
+  color: var(--surface-text) !important;
+}
+
+.text-slate-700,
+.text-slate-600,
+.text-slate-500 {
+  color: var(--surface-muted-text) !important;
+}
+
 
 @custom-variant dark (&:is(.dark *));
 
