@@ -4,4 +4,6 @@ export type Screen =
   | "financeiro"
   | "inadimplencia"
   | "relatorios"
-  | "configuracoes";
+  | "configuracoes"
+  | "admin-usuarios"
+  | "perfil";

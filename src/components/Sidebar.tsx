@@ -1,13 +1,20 @@
-﻿import {
+﻿"use client";
+/* eslint-disable @next/next/no-img-element */
+
+import { useEffect, useMemo, useState } from "react";
+import {
   Home,
   Users,
   DollarSign,
   AlertTriangle,
   BarChart3,
   Settings,
-  User,
+  ShieldCheck,
 } from "lucide-react";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
+
 import { Screen } from "@types/screens";
+import { auth } from "@lib/firebase";
 
 interface SidebarProps {
   activeScreen: Screen;
@@ -15,6 +22,23 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeScreen, onNavigate }: SidebarProps) {
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => setCurrentUser(user));
+    return () => unsubscribe();
+  }, []);
+
+  const initials = useMemo(() => {
+    if (currentUser?.displayName) {
+      return currentUser.displayName[0]?.toUpperCase();
+    }
+    if (currentUser?.email) {
+      return currentUser.email[0]?.toUpperCase();
+    }
+    return "N";
+  }, [currentUser]);
+
   const navItems = [
     { id: "dashboard" as Screen, label: "Dashboard Estratégico", icon: Home },
     { id: "base-ativa" as Screen, label: "Base Ativa", icon: Users },
@@ -26,6 +50,11 @@ export function Sidebar({ activeScreen, onNavigate }: SidebarProps) {
     },
     { id: "relatorios" as Screen, label: "Relatórios", icon: BarChart3 },
     { id: "configuracoes" as Screen, label: "Configurações", icon: Settings },
+    {
+      id: "admin-usuarios" as Screen,
+      label: "Administração",
+      icon: ShieldCheck,
+    },
   ];
 
   return (
@@ -91,15 +120,31 @@ export function Sidebar({ activeScreen, onNavigate }: SidebarProps) {
 
       {/* User Profile */}
       <div className="p-4 border-t border-slate-800">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-slate-800">
-          <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center">
-            <User size={20} className="text-slate-300" />
-          </div>
+        <button
+          type="button"
+          onClick={() => onNavigate("perfil")}
+          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-slate-800 text-left hover:bg-slate-700 transition"
+        >
+          {currentUser?.photoURL ? (
+            <img
+              src={currentUser.photoURL}
+              alt={currentUser.displayName ?? "Foto do usuário"}
+              className="w-10 h-10 rounded-full object-cover border border-slate-700"
+            />
+          ) : (
+            <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-sm font-medium text-white">
+              {initials}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
-            <div className="text-sm text-white truncate">Admin User</div>
-            <div className="text-xs text-slate-400">Financeiro Admin</div>
+            <div className="text-sm text-white truncate">
+              {currentUser?.displayName ?? "Usuário autenticado"}
+            </div>
+            <div className="text-xs text-slate-400 truncate">
+              {currentUser?.email ?? "Autenticação Firebase"}
+            </div>
           </div>
-        </div>
+        </button>
       </div>
     </div>
   );

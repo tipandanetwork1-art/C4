@@ -1,4 +1,7 @@
-﻿import { CalendarDays, RefreshCw } from "lucide-react";
+﻿"use client";
+
+import { ThemeToggle } from "@components/ThemeToggle";
+import { CalendarDays, RefreshCw } from "lucide-react";
 import { Screen } from "@types/screens";
 
 interface HeaderProps {
@@ -30,6 +33,14 @@ const screenTitles: Record<Screen, { title: string; subtitle: string }> = {
     title: "Configurações do Sistema",
     subtitle: "Usuários, integrações e preferências",
   },
+  "admin-usuarios": {
+    title: "Administração de Usuários",
+    subtitle: "Controle de permissões e segurança",
+  },
+  perfil: {
+    title: "Meu Perfil",
+    subtitle: "Atualize seus dados pessoais e credenciais",
+  },
 };
 
 export function Header({ activeScreen }: HeaderProps) {
@@ -44,16 +55,16 @@ export function Header({ activeScreen }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Date Range Picker */}
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-            <CalendarDays size={18} className="text-slate-600" />
-            <span className="text-slate-700 text-sm">Este Mês</span>
+          <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors dark:border-slate-700 dark:hover:bg-slate-800">
+            <CalendarDays size={18} className="text-slate-600 dark:text-slate-200" />
+            <span className="text-slate-700 text-sm dark:text-slate-200">Este mês</span>
           </button>
 
-          {/* Refresh Button */}
-          <button className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-            <RefreshCw size={18} className="text-slate-600" />
+          <button className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors dark:border-slate-700 dark:hover:bg-slate-800">
+            <RefreshCw size={18} className="text-slate-600 dark:text-slate-200" />
           </button>
+
+          <ThemeToggle />
         </div>
       </div>
     </header>
