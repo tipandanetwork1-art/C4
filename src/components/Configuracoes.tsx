@@ -56,7 +56,7 @@ export function Configuracoes() {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
                 <div>
-                  <p className="text-slate-900 text-sm">Sincronização IXC</p>
+                  <p className="text-slate-900 text-sm">Sincronização financeira</p>
                   <p className="text-slate-600 text-xs">Última execução: Hoje 08:00</p>
                 </div>
               </div>

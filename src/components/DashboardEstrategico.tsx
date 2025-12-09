@@ -1,15 +1,24 @@
-import { TrendingUp, Calendar, Tag, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-// Mock data for charts
-const revenueData = [
-  { month: 'Jul', real: 210000, projetado: 220000 },
-  { month: 'Ago', real: 225000, projetado: 230000 },
-  { month: 'Set', real: 235000, projetado: 240000 },
-  { month: 'Out', real: 242000, projetado: 245000 },
-  { month: 'Nov', real: 250000, projetado: 255000 },
-  { month: 'Dez', real: null, projetado: 260000 },
-];
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  TrendingUp,
+  Calendar,
+  Tag,
+  AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
+} from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 const clientHealthData = [
   { name: 'Em Dia', value: 850, color: '#10B981' },
@@ -24,12 +33,105 @@ const agingData = [
   { range: '+90 dias', valor: 9500 },
 ];
 
+interface FluxoResumo {
+  totalValor: number;
+  totalRecebido: number;
+  totalEmAberto: number;
+  taxaAberto: number;
+  periodo: {
+    inicio: string;
+    fim: string;
+  };
+  registrosConsiderados: number;
+}
+
+const currencyFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  minimumFractionDigits: 2,
+});
+
 export function DashboardEstrategico() {
+  const [fluxoResumo, setFluxoResumo] = useState<FluxoResumo | null>(null);
+  const [fluxoLoading, setFluxoLoading] = useState(true);
+  const [fluxoError, setFluxoError] = useState<string | null>(null);
+
+  const carregarFluxoResumo = useCallback(async () => {
+    try {
+      setFluxoLoading(true);
+      setFluxoError(null);
+      const hoje = new Date();
+      const params = new URLSearchParams({
+        mes: String(hoje.getMonth() + 1),
+        ano: String(hoje.getFullYear()),
+      });
+      const response = await fetch(`/api/dashboard/fluxo?${params.toString()}`);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Falha ao consultar API de fluxo mensal');
+      }
+      const data = (await response.json()) as FluxoResumo & {
+        success: boolean;
+        error?: string;
+      };
+      if (!data.success) {
+        throw new Error(data.error || 'A API do IXC retornou um erro');
+      }
+      setFluxoResumo({
+        totalValor: data.totalValor,
+        totalRecebido: data.totalRecebido,
+        totalEmAberto: data.totalEmAberto,
+        taxaAberto: data.taxaAberto,
+        periodo: data.periodo,
+        registrosConsiderados: data.registrosConsiderados,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        setFluxoError(error.message);
+      } else {
+        setFluxoError('Falha inesperada ao carregar o fluxo mensal.');
+      }
+    } finally {
+      setFluxoLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    carregarFluxoResumo();
+  }, [carregarFluxoResumo]);
+
+  const fluxoChartData = useMemo(() => {
+    if (!fluxoResumo) return [];
+    return [
+      { categoria: 'Recebido', valor: fluxoResumo.totalRecebido, color: '#10B981' },
+      { categoria: 'Em aberto', valor: fluxoResumo.totalEmAberto, color: '#E11D48' },
+    ];
+  }, [fluxoResumo]);
+
+  const percentAberto = fluxoResumo
+    ? Math.round(fluxoResumo.taxaAberto * 1000) / 10
+    : 0;
+
+  const periodoDescricao = fluxoResumo
+    ? new Intl.DateTimeFormat('pt-BR', {
+        month: 'long',
+        year: 'numeric',
+      }).format(new Date(fluxoResumo.periodo.inicio))
+    : '';
+
+  const periodoDetalhe = fluxoResumo
+    ? `${new Intl.DateTimeFormat('pt-BR', { day: '2-digit' }).format(
+        new Date(fluxoResumo.periodo.inicio)
+      )} - ${new Intl.DateTimeFormat('pt-BR', { day: '2-digit' }).format(
+        new Date(fluxoResumo.periodo.fim)
+      )}`
+    : '';
+
+  const formatCurrency = (value?: number) => currencyFormatter.format(value ?? 0);
+
   return (
     <div className="p-8 space-y-6">
-      {/* Top Row: KPI Cards */}
       <div className="grid grid-cols-4 gap-6">
-        {/* MRR */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -47,7 +149,6 @@ export function DashboardEstrategico() {
           </div>
         </div>
 
-        {/* Receita Projetada */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -64,7 +165,6 @@ export function DashboardEstrategico() {
           </div>
         </div>
 
-        {/* Ticket Médio */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -81,7 +181,6 @@ export function DashboardEstrategico() {
           </div>
         </div>
 
-        {/* Inadimplência */}
         <div className="bg-gradient-to-br from-rose-50 to-red-50 rounded-xl p-6 shadow-sm border-2 border-rose-200">
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -100,31 +199,117 @@ export function DashboardEstrategico() {
         </div>
       </div>
 
-      {/* Middle Row: Main Charts */}
       <div className="grid grid-cols-3 gap-6">
-        {/* Revenue Chart - 2/3 width */}
         <div className="col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-          <div className="mb-6">
-            <h3 className="text-slate-900 text-lg">Fluxo de Receita Real vs. Projetado</h3>
-            <p className="text-slate-500 text-sm mt-1">Últimos 6 meses</p>
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+            <div>
+              <h3 className="text-slate-900 text-lg">Resumo de Receita Mensal</h3>
+              <p className="text-slate-500 text-sm mt-1">
+                {fluxoResumo
+                  ? `Período: ${periodoDescricao} (${periodoDetalhe})`
+                  : 'Aguardando atualização do mês atual'}
+              </p>
+            </div>
+            <button
+              onClick={carregarFluxoResumo}
+              disabled={fluxoLoading}
+              className="px-4 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              {fluxoLoading ? 'Atualizando...' : 'Atualizar'}
+            </button>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={revenueData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="month" stroke="#64748B" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#64748B" style={{ fontSize: '12px' }} tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`} />
-              <Tooltip 
-                formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR')}`}
-                contentStyle={{ backgroundColor: 'white', border: '1px solid #E2E8F0', borderRadius: '8px' }}
-              />
-              <Legend />
-              <Line type="monotone" dataKey="real" stroke="#10B981" strokeWidth={3} name="Receita Real" dot={{ fill: '#10B981', r: 5 }} />
-              <Line type="monotone" dataKey="projetado" stroke="#3B82F6" strokeWidth={2} strokeDasharray="5 5" name="Receita Projetada" dot={{ fill: '#3B82F6', r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+
+          {fluxoError && (
+            <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              {fluxoError}
+            </div>
+          )}
+
+          {fluxoResumo ? (
+            <>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Soma de Valor</p>
+                  <p className="text-2xl font-semibold text-slate-900 mt-2">
+                    {formatCurrency(fluxoResumo.totalValor)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Valor Recebido</p>
+                  <p className="text-2xl font-semibold text-emerald-600 mt-2">
+                    {formatCurrency(fluxoResumo.totalRecebido)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Valor em Aberto</p>
+                  <p className="text-2xl font-semibold text-rose-600 mt-2">
+                    {formatCurrency(fluxoResumo.totalEmAberto)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 grid grid-cols-3 gap-6">
+                <div className="col-span-2 h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={fluxoChartData}
+                      layout="vertical"
+                      barCategoryGap={32}
+                      margin={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                      <XAxis
+                        type="number"
+                        tickFormatter={(value) => currencyFormatter.format(value as number)}
+                        stroke="#94A3B8"
+                      />
+                      <YAxis type="category" dataKey="categoria" stroke="#94A3B8" width={90} />
+                      <Tooltip
+                        formatter={(value: number) => currencyFormatter.format(value)}
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '8px',
+                        }}
+                      />
+                      <Bar dataKey="valor" radius={[8, 8, 8, 8]}>
+                        {fluxoChartData.map((item) => (
+                          <Cell key={`bar-${item.categoria}`} fill={item.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 p-4 bg-slate-50 flex flex-col justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Taxa de Aberto</p>
+                    <p className="text-3xl font-semibold text-slate-900 mt-2">
+                      {percentAberto.toFixed(1)}%
+                    </p>
+                  </div>
+                  <div>
+                    <div className="h-3 rounded-full bg-white overflow-hidden border border-slate-200">
+                      <div
+                        className="h-full bg-rose-500 transition-all"
+                        style={{ width: `${Math.min(100, Math.max(0, percentAberto))}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">
+                      {fluxoResumo.registrosConsiderados} títulos analisados
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            !fluxoLoading &&
+            !fluxoError && (
+              <p className="text-sm text-slate-500">Nenhum dado retornado para este período.</p>
+            )
+          )}
         </div>
 
-        {/* Client Health Donut - 1/3 width */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="mb-6">
             <h3 className="text-slate-900 text-lg">Saúde da Base Ativa</h3>
@@ -152,7 +337,7 @@ export function DashboardEstrategico() {
             {clientHealthData.map((item) => (
               <div key={item.name} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                   <span className="text-slate-600">{item.name}</span>
                 </div>
                 <span className="text-slate-900">{item.value}</span>
@@ -162,9 +347,7 @@ export function DashboardEstrategico() {
         </div>
       </div>
 
-      {/* Bottom Row: Operational Snapshots */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Aging Bar Chart */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="mb-6">
             <h3 className="text-slate-900 text-lg">Curva de Inadimplência (Aging)</h3>
@@ -174,21 +357,27 @@ export function DashboardEstrategico() {
             <BarChart data={agingData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis dataKey="range" stroke="#64748B" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#64748B" style={{ fontSize: '12px' }} tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`} />
-              <Tooltip 
+              <YAxis
+                stroke="#64748B"
+                style={{ fontSize: '12px' }}
+                tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+              />
+              <Tooltip
                 formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR')}`}
                 contentStyle={{ backgroundColor: 'white', border: '1px solid #E2E8F0', borderRadius: '8px' }}
               />
               <Bar dataKey="valor" radius={[8, 8, 0, 0]}>
                 {agingData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={index === 3 ? '#E11D48' : index === 2 ? '#F59E0B' : '#3B82F6'} />
+                  <Cell
+                    key={`aging-${index}`}
+                    fill={index === 3 ? '#E11D48' : index === 2 ? '#F59E0B' : '#3B82F6'}
+                  />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Quick Actions */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="mb-6">
             <h3 className="text-slate-900 text-lg">Atalhos Rápidos</h3>
@@ -197,19 +386,31 @@ export function DashboardEstrategico() {
           <div className="space-y-3">
             <button className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group">
               <span className="text-blue-900">Importar CSV Legado</span>
-              <ArrowUpRight size={18} className="text-blue-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <ArrowUpRight
+                size={18}
+                className="text-blue-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"
+              />
             </button>
             <button className="w-full flex items-center justify-between px-4 py-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors group">
               <span className="text-emerald-900">Registrar Despesa Manual</span>
-              <ArrowUpRight size={18} className="text-emerald-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <ArrowUpRight
+                size={18}
+                className="text-emerald-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"
+              />
             </button>
             <button className="w-full flex items-center justify-between px-4 py-3 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors group">
               <span className="text-rose-900">Ver Fila de Cobrança</span>
-              <ArrowUpRight size={18} className="text-rose-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <ArrowUpRight
+                size={18}
+                className="text-rose-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"
+              />
             </button>
             <button className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors group">
               <span className="text-slate-900">Exportar Relatório Mensal</span>
-              <ArrowUpRight size={18} className="text-slate-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <ArrowUpRight
+                size={18}
+                className="text-slate-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"
+              />
             </button>
           </div>
         </div>

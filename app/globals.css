@@ -50,6 +50,11 @@ body {
   background-color: var(--surface-muted) !important;
 }
 
+.hover\:bg-slate-50:hover,
+.hover\:bg-slate-100:hover {
+  background-color: var(--surface-muted) !important;
+}
+
 .border-slate-200,
 .border-slate-100 {
   border-color: var(--surface-border) !important;

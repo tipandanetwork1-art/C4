@@ -1,7 +1,40 @@
 import { useState, useEffect } from 'react';
 import { RefreshCw, TrendingUp, AlertTriangle, DollarSign, Clock, Filter } from 'lucide-react';
-import { IXCAPIService } from '../services/ixcAPI';
 import { TituloDivida, DashboardStats } from '../types/database';
+
+const TITULOS_LOCAIS: TituloDivida[] = [
+  {
+    id_titulo: 'LOC-001',
+    id_cliente: 'CLI-001',
+    valor_original: 2500,
+    data_vencimento: '2024-08-15',
+    dias_atraso: 95,
+    status_atual: 'Em Aberto',
+  },
+  {
+    id_titulo: 'LOC-002',
+    id_cliente: 'CLI-002',
+    valor_original: 890,
+    data_vencimento: '2024-09-10',
+    dias_atraso: 62,
+    status_atual: 'Enviado CQuatro',
+  },
+  {
+    id_titulo: 'LOC-003',
+    id_cliente: 'CLI-003',
+    valor_original: 1480,
+    data_vencimento: '2024-09-28',
+    dias_atraso: 34,
+    status_atual: 'Em Aberto',
+  },
+];
+
+const classificarPorAging = (dias: number): '0-30' | '30-60' | '60-90' | '90+' => {
+  if (dias < 30) return '0-30';
+  if (dias < 60) return '30-60';
+  if (dias < 90) return '60-90';
+  return '90+';
+};
 
 export function RadarDashboard() {
   const [isLoading, setIsLoading] = useState(false);
@@ -9,33 +42,25 @@ export function RadarDashboard() {
   const [titulos, setTitulos] = useState<TituloDivida[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | '30-60' | '60-90' | '90+'>('all');
 
-  // Sincronizar com IXC API
   const handleSync = async () => {
     setIsLoading(true);
-    try {
-      const result = await IXCAPIService.buscarTitulosAbertos(0); // Buscar todos com atraso
-      setTitulos(result);
+    setTimeout(() => {
+      setTitulos(TITULOS_LOCAIS);
       setLastSync(new Date());
-      console.log('✅ Sincronização concluída:', result.length, 'títulos encontrados');
-    } catch (error) {
-      console.error('❌ Erro na sincronização:', error);
-    } finally {
       setIsLoading(false);
-    }
+    }, 400);
   };
 
-  // Auto-sync on mount
   useEffect(() => {
     handleSync();
   }, []);
 
-  // Calcular estatísticas
   const calcularStats = (): DashboardStats => {
-    const novos7dias = titulos.filter(t => t.dias_atraso >= 30 && t.dias_atraso <= 37).length;
-    const elegivel = titulos.filter(t => t.dias_atraso >= 60 && t.status_atual !== 'Enviado CQuatro').length;
-    const atrasos30_60 = titulos.filter(t => t.dias_atraso >= 30 && t.dias_atraso < 60).length;
-    const atrasos60_90 = titulos.filter(t => t.dias_atraso >= 60 && t.dias_atraso < 90).length;
-    const atrasos90plus = titulos.filter(t => t.dias_atraso >= 90).length;
+    const novos7dias = titulos.filter((t) => t.dias_atraso >= 30 && t.dias_atraso <= 37).length;
+    const elegivel = titulos.filter((t) => t.dias_atraso >= 60 && t.status_atual !== 'Enviado CQuatro').length;
+    const atrasos30_60 = titulos.filter((t) => t.dias_atraso >= 30 && t.dias_atraso < 60).length;
+    const atrasos60_90 = titulos.filter((t) => t.dias_atraso >= 60 && t.dias_atraso < 90).length;
+    const atrasos90plus = titulos.filter((t) => t.dias_atraso >= 90).length;
     const valorTotal = titulos.reduce((sum, t) => sum + t.valor_original, 0);
 
     return {
@@ -50,8 +75,7 @@ export function RadarDashboard() {
 
   const stats = calcularStats();
 
-  // Filtrar títulos por faixa de aging
-  const filteredTitulos = titulos.filter(t => {
+  const filteredTitulos = titulos.filter((t) => {
     if (activeFilter === 'all') return true;
     if (activeFilter === '30-60') return t.dias_atraso >= 30 && t.dias_atraso < 60;
     if (activeFilter === '60-90') return t.dias_atraso >= 60 && t.dias_atraso < 90;
@@ -75,39 +99,36 @@ export function RadarDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header com Sincronização */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-slate-900 text-2xl">Radar de Inadimplência</h1>
           <p className="text-slate-600 text-sm mt-1">
-            Monitoramento automático via API IXC
+            Monitoramento baseado em dados locais
           </p>
           {lastSync && (
             <p className="text-slate-500 text-xs mt-1">
-              Última sincronização: {lastSync.toLocaleString('pt-BR')}
+              Última atualização: {lastSync.toLocaleString('pt-BR')}
             </p>
           )}
         </div>
-        
+
         <button
           onClick={handleSync}
           disabled={isLoading}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-          {isLoading ? 'Sincronizando...' : 'Sincronizar IXC'}
+          {isLoading ? 'Atualizando...' : 'Atualizar dados'}
         </button>
       </div>
 
-      {/* KPI Cards - Widgets Vivos */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* KPI 1: Novos Inadimplentes */}
         <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-slate-600 text-sm mb-2">Novos Inadimplentes</p>
+              <p className="text-slate-600 text-sm mb-2">Novos inadimplentes</p>
               <p className="text-slate-900 text-3xl">{stats.novos_inadimplentes_7dias}</p>
-              <p className="text-slate-500 text-xs mt-1">Últimos 7 dias (30-37d)</p>
+              <p className="text-slate-500 text-xs mt-1">Últimos 7 dias</p>
             </div>
             <div className="p-3 rounded-lg bg-amber-100 text-amber-600">
               <TrendingUp size={24} />
@@ -115,13 +136,12 @@ export function RadarDashboard() {
           </div>
         </div>
 
-        {/* KPI 2: Carteira Elegível para Cobrança */}
         <div className="bg-gradient-to-br from-rose-50 to-orange-50 rounded-lg p-6 shadow-sm border-2 border-rose-300">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-rose-700 text-sm mb-2">🚨 Elegível para CQuatro</p>
-              <p className="text-rose-900 text-3xl animate-pulse">{stats.carteira_elegivel_cobranca}</p>
-              <p className="text-rose-600 text-xs mt-1">Títulos vencidos há 60+ dias</p>
+              <p className="text-rose-700 text-sm mb-2">Elegível para cobrança</p>
+              <p className="text-rose-900 text-3xl">{stats.carteira_elegivel_cobranca}</p>
+              <p className="text-rose-600 text-xs mt-1">Títulos com 60+ dias</p>
             </div>
             <div className="p-3 rounded-lg bg-rose-200 text-rose-700">
               <AlertTriangle size={24} />
@@ -129,11 +149,10 @@ export function RadarDashboard() {
           </div>
         </div>
 
-        {/* KPI 3: Valor Total em Carteira */}
         <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-slate-600 text-sm mb-2">Total em Carteira</p>
+              <p className="text-slate-600 text-sm mb-2">Total em carteira</p>
               <p className="text-slate-900 text-3xl">
                 R$ {(stats.valor_total_carteira / 1000).toFixed(1)}k
               </p>
@@ -141,20 +160,19 @@ export function RadarDashboard() {
                 {titulos.length} título{titulos.length !== 1 ? 's' : ''}
               </p>
             </div>
-            <div className="p-3 rounded-lg bg-blue-100 text-blue-600">
+              <div className="p-3 rounded-lg bg-blue-100 text-blue-600">
               <DollarSign size={24} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filtros de Aging */}
       <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200">
         <div className="flex items-center gap-3 mb-4">
           <Clock size={20} className="text-slate-600" />
-          <h3 className="text-slate-900">Filtros por Envelhecimento (Aging)</h3>
+          <h3 className="text-slate-900">Filtros por envelhecimento</h3>
         </div>
-        
+
         <div className="flex flex-wrap gap-3">
           <button
             onClick={() => setActiveFilter('all')}
@@ -166,7 +184,7 @@ export function RadarDashboard() {
           >
             Todos ({titulos.length})
           </button>
-          
+
           <button
             onClick={() => setActiveFilter('30-60')}
             className={`px-4 py-2 rounded-lg border transition-all ${
@@ -175,9 +193,9 @@ export function RadarDashboard() {
                 : 'bg-amber-50 text-amber-700 border-amber-300 hover:border-amber-500'
             }`}
           >
-            🟡 30-60 dias ({stats.atrasos_30_60_dias})
+            30-60 dias ({stats.atrasos_30_60_dias})
           </button>
-          
+
           <button
             onClick={() => setActiveFilter('60-90')}
             className={`px-4 py-2 rounded-lg border transition-all ${
@@ -186,9 +204,9 @@ export function RadarDashboard() {
                 : 'bg-orange-50 text-orange-700 border-orange-300 hover:border-orange-500'
             }`}
           >
-            🟠 60-90 dias ({stats.atrasos_60_90_dias})
+            60-90 dias ({stats.atrasos_60_90_dias})
           </button>
-          
+
           <button
             onClick={() => setActiveFilter('90+')}
             className={`px-4 py-2 rounded-lg border transition-all ${
@@ -197,26 +215,25 @@ export function RadarDashboard() {
                 : 'bg-rose-50 text-rose-700 border-rose-300 hover:border-rose-500'
             }`}
           >
-            🔴 90+ dias ({stats.atrasos_90_plus_dias})
+            90+ dias ({stats.atrasos_90_plus_dias})
           </button>
         </div>
       </div>
 
-      {/* Tabela de Títulos com Filtro Ativo */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-6 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-slate-900">Títulos Monitorados</h2>
+              <h2 className="text-slate-900">Títulos monitorados</h2>
               <p className="text-slate-600 text-sm mt-1">
                 {filteredTitulos.length} de {titulos.length} título{filteredTitulos.length !== 1 ? 's' : ''}
-                {activeFilter !== 'all' && ` (filtro: ${activeFilter} dias)`}
+                {activeFilter !== 'all' && ` (filtro: ${activeFilter})`}
               </p>
             </div>
             <Filter size={20} className="text-slate-400" />
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">
@@ -247,17 +264,21 @@ export function RadarDashboard() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${
-                      titulo.status_atual === 'Em Aberto' ? 'bg-rose-100 text-rose-700' :
-                      titulo.status_atual === 'Enviado CQuatro' ? 'bg-amber-100 text-amber-700' :
-                      'bg-emerald-100 text-emerald-700'
-                    }`}>
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded text-xs ${
+                        titulo.status_atual === 'Em Aberto'
+                          ? 'bg-rose-100 text-rose-700'
+                          : titulo.status_atual === 'Enviado CQuatro'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-emerald-100 text-emerald-700'
+                      }`}
+                    >
                       {titulo.status_atual}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs border ${getAgingBadge(titulo.dias_atraso)}`}>
-                      {IXCAPIService.classificarPorAging(titulo.dias_atraso)}
+                      {classificarPorAging(titulo.dias_atraso)}
                     </span>
                   </td>
                 </tr>
