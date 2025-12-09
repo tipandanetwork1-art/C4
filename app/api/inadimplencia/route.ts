@@ -9,12 +9,10 @@ const IXC_CONFIG = {
     '339:500a9bb5ece76c8648cd4c47da81b48c71734ff1d46f525b5a31f2f45bd81d84',
 };
 
-const IXC_FETCH_PAGE_SIZE =
-  globalThis.__IXC_FETCH_PAGE_SIZE__ ||
-  (globalThis.__IXC_FETCH_PAGE_SIZE__ = Math.max(
-    parseInt(process.env.IXC_API_FETCH_RP ?? '200', 10),
-    50
-  ));
+const IXC_FETCH_PAGE_SIZE = Math.max(
+  parseInt(process.env.IXC_API_FETCH_RP ?? '200', 10),
+  50
+);
 
 const DATA_CORTE_INICIO = new Date(2024, 0, 1, 0, 0, 0, 0);
 const CACHE_TTL_MS = Math.max(
