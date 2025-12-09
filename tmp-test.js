@@ -1,0 +1,11 @@
+const https=require('https');
+const config={baseUrl:'https://191.7.184.11/webservice/v1',token:'339:500a9bb5ece76c8648cd4c47da81b48c71734ff1d46f525b5a31f2f45bd81d84'};
+const dataInicio='2025-12-01';
+const dataFim='2025-12-31';
+const filters=[{field:'fn_areceber.data_vencimento',type:'date',comparison:'between',value:dataInicio+'|'+dataFim}];
+const payload=JSON.stringify({qtype:'fn_areceber.status',query:'A',oper:'=',page:1,rp:200,sortname:'fn_areceber.data_vencimento',sortorder:'desc',filters});
+const auth=Buffer.from(config.token).toString('base64');
+const req=https.request(config.baseUrl + '/fn_areceber',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Basic '+auth,ixcsoft:'listar','Content-Length':Buffer.byteLength(payload)},agent:new https.Agent({rejectUnauthorized:false})},res=>{let raw='';res.on('data',c=>raw+=c);res.on('end',()=>{console.log(raw.slice(0,200));});});
+req.on('error',err=>console.error('ERR',err));
+req.write(payload);
+req.end();
